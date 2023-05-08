@@ -35,7 +35,6 @@ initializeDBAndServer();
 app.post("/register", async (request, response) => {
   const requestBody = request.body;
   const { username, name, password, gender, location } = requestBody;
-  console.log(requestBody);
   const usernameQuery = `
     SELECT * FROM user WHERE username = '${username}';
   `;
@@ -48,7 +47,8 @@ app.post("/register", async (request, response) => {
       response.status(400);
       response.send("Password is too short");
     } else {
-      const encryptedPassword = bcrypt.hash(password, 5);
+      const encryptedPassword = await bcrypt.hash(password, 5);
+      console.log(encryptedPassword);
       const postQuery = `
         INSERT INTO user(username,name,password,gender, location)
         VALUES(
@@ -62,6 +62,28 @@ app.post("/register", async (request, response) => {
       const dbResponse = await db.run(postQuery);
       response.status(200);
       response.send("User created successfully");
+    }
+  }
+});
+
+//API 2 with 3 scenarios
+app.post("/login", async (request, response) => {
+  const requestBody = request.body;
+  console.log(requestBody);
+  const { username, password } = requestBody;
+  const selectUserQuery = `SELECT * FROM user WHERE username = '${username}'`;
+  const dbUser = await db.get(selectUserQuery);
+  if (dbUser === undefined) {
+    response.status(400);
+    response.send("Invalid User");
+  } else {
+    const isPasswordMatched = await bcrypt.compare(password, dbUser.password);
+    if (isPasswordMatched === true) {
+      response.status(200);
+      response.send("Login success!");
+    } else {
+      response.status(400);
+      response.send("Invalid password");
     }
   }
 });
